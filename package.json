@@ -1,0 +1,18 @@
+{
+  "name": "story-time-api",
+  "version": "1.0.0",
+  "description": "Express API to process story-time messages",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "console-stamp": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "socket.io": "^4.0.1"
+  }
+}
