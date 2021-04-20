@@ -15,18 +15,40 @@ const maxUsers = process.env.MAX_USERS;
 const submissionTimeLimit = process.env.SUBMISSION_TIMER_MS;
 
 const currentUsers = [];
-//const userColours = ["Aqua", "Brown", "Coral", "DarkGreen", "DarkMagenta"];
+let userColours = ["Aqua", "Brown", "Coral", "DarkGreen", "DarkMagenta"];
+const userColourMap = new Map();
+let turn = 0;
+let submissionId = 0;
+let timer;
 
-const submissions = [];
+let submissions = [];
 let currentSubmission = "";
+
+const startGame = () => {
+  io.emit("nextTurn", currentUsers[turn]);
+  if (!timer) {
+    timer = setInterval(nextTurn, submissionTimeLimit);
+  }
+};
 
 const nextTurn = () => {
   // Add current submission to the array of prior submissions
+  currentSubmission.colour = userColourMap.get(currentUsers[turn]);
+  currentSubmission.submissionId = submissionId;
   submissions.push(currentSubmission);
+
   currentSubmission = "";
+  submissionId++;
+
+  // Increment turn. If no user exists at this index, start again at 0
+  turn++;
+
+  if (typeof currentUsers[turn] === "undefined") {
+    turn = 0;
+  }
 
   // Emit next turn and updated submissions
-  io.emit("nextTurn", currentUsers[0]);
+  io.emit("nextTurn", currentUsers[turn]);
   io.emit("submissions", submissions);
 };
 
@@ -34,11 +56,15 @@ io.on("connection", (client) => {
   // Allow new users to join until the configured max number has been reached
   if (currentUsers.length < maxUsers) {
     currentUsers.push(client.id);
-    //console.log(currentUsers);
+    userColourMap.set(client.id, userColours.pop());
   } else {
     client.emit("error", "Max users reached");
     client.disconnect();
     return;
+  }
+
+  if (currentUsers.length === 1) {
+    startGame();
   }
 
   client.on("disconnect", () => {
@@ -47,13 +73,20 @@ io.on("connection", (client) => {
     if (index > -1) {
       currentUsers.splice(index, 1);
     }
+
+    if (currentUsers.length === 0) {
+      submissions = [];
+      clearInterval(timer);
+      timer = null;
+      turn = 0;
+      userColours = ["Aqua", "Brown", "Coral", "DarkGreen", "DarkMagenta"];
+    }
   });
 
   client.on("newText", (data) => {
     // Broadcast current text to everyone except the sender
     client.broadcast.emit("currentSubmission", data);
     currentSubmission = data;
-    console.log(currentSubmission);
   });
 });
 
