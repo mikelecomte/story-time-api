@@ -1,6 +1,11 @@
 const MongoClient = require("mongodb").MongoClient;
 
 const persistMessage = async (message) => {
+  // Discard blank messages
+  if (!message.text) {
+    return;
+  }
+
   let client;
 
   try {
@@ -12,7 +17,7 @@ const persistMessage = async (message) => {
     const database = client.db("storyTime");
     const messages = database.collection("messages");
 
-    // create a document to be inserted
+    // Create a document to be inserted
     const result = await messages.insertOne(message);
 
     console.log(

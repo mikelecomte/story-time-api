@@ -16,7 +16,9 @@ const maxUsers = process.env.MAX_USERS;
 const submissionTimeLimit = process.env.SUBMISSION_TIMER_MS;
 
 const currentUsers = [];
-const userColourMap = new Map();
+
+// Each user will be assigned a unique colour to tell who wrote which story part
+let userColourMap = new Map();
 let userColours = ["Aqua", "Brown", "Coral", "DarkGreen", "DarkMagenta"];
 
 let submissionId = 0;
@@ -29,6 +31,7 @@ let timer;
 const startGame = () => {
   // Kick off first turn and start the timer
   io.emit("nextTurn", currentUsers[turn]);
+
   if (!timer) {
     timer = setInterval(nextTurn, submissionTimeLimit);
   }
@@ -71,8 +74,11 @@ io.on("connection", (client) => {
   } else {
     client.emit("error", "Max users reached");
     client.disconnect();
+
     return;
   }
+
+  io.emit("userCount", currentUsers.length);
 
   // Assume that a single user is the start of the game
   if (currentUsers.length === 1) {
@@ -80,9 +86,13 @@ io.on("connection", (client) => {
   }
 
   client.on("disconnect", () => {
-    // Remove the user from the list of current users
+    // Find the user that has disconnected
     const index = currentUsers.indexOf(client.id);
     if (index > -1) {
+      // Return the current user's colour to the array of available colours
+      userColours.push(userColourMap.get(currentUsers[index]));
+
+      // Remove the user
       currentUsers.splice(index, 1);
     }
 
@@ -93,6 +103,9 @@ io.on("connection", (client) => {
       timer = null;
       turn = 0;
       userColours = ["Aqua", "Brown", "Coral", "DarkGreen", "DarkMagenta"];
+      userColourMap = new Map();
+    } else {
+      io.emit("userCount", currentUsers.length);
     }
   });
 
