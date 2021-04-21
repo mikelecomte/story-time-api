@@ -1,5 +1,4 @@
 require("dotenv").config();
-require("console-stamp")(console);
 
 const app = require("express")();
 const server = require("http").createServer(app);
@@ -10,6 +9,8 @@ const io = require("socket.io")(server, {
   },
 });
 
+const db = require("./db");
+
 const port = process.env.PORT || 4000;
 const maxUsers = process.env.MAX_USERS;
 const submissionTimeLimit = process.env.SUBMISSION_TIMER_MS;
@@ -18,12 +19,12 @@ const currentUsers = [];
 const userColourMap = new Map();
 let userColours = ["Aqua", "Brown", "Coral", "DarkGreen", "DarkMagenta"];
 
-let turn = 0;
 let submissionId = 0;
-let timer;
-
 let submissions = [];
 let currentSubmission = { text: "" };
+
+let turn = 0;
+let timer;
 
 const startGame = () => {
   // Kick off first turn and start the timer
@@ -33,13 +34,16 @@ const startGame = () => {
   }
 };
 
-const nextTurn = () => {
+const nextTurn = async () => {
   // Add the user's assigned colour and a submissionId to the submission
   currentSubmission.colour = userColourMap.get(currentUsers[turn]);
   currentSubmission.submissionId = submissionId;
 
   // Add current submission to the array of prior submissions
   submissions.push(currentSubmission);
+
+  // Save the last submission to our MongoDB
+  await db.persistMessage(currentSubmission);
 
   // Reset the currentSubmission value to be blank and increment ID for the next user
   currentSubmission = { text: "" };
